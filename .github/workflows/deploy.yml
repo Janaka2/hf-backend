@@ -25,7 +25,7 @@ jobs:
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
           PUSHOVER_API_KEY: ${{ secrets.PUSHOVER_API_KEY }}
-          HF_SPACE_ID: janaka2/my-hello-api
+          HF_SPACE_ID: ${{ vars.HF_SPACE_ID }}
           ALLOWED_ORIGINS: ${{ vars.ALLOWED_ORIGINS }}
         run: |
           python - <<'PY'

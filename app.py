@@ -19,7 +19,7 @@ app.add_middleware(
 )
 
 # Secret injected via HF Space Secrets (set by GitHub Actions)
-MY_API_KEY = os.getenv("MY_API_KEY")
+MY_API_KEY = os.getenv("PUSHOVER_API_KEY")
 
 @app.get("/")
 def root():
