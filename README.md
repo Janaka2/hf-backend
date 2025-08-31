@@ -3,8 +3,8 @@ title: My Hello API
 emoji: 🚀
 colorFrom: blue
 colorTo: green
-sdk: docker
-app_file: Dockerfile
+sdk: fastapi
+app_file: app.py
 pinned: false
 ---
 
