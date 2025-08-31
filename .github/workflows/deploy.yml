@@ -24,17 +24,21 @@ jobs:
       - name: Upload to Hugging Face & set secrets
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-          PUSHOVER_API_KEY: ${{ secrets.PUSHOVER_API_KEY }}
           HF_SPACE_ID: ${{ vars.HF_SPACE_ID }}
+          # ❗ add these:
+          FRONTEND_APP_KEY: ${{ secrets.FRONTEND_APP_KEY }}
+          PUSHOVER_API_KEY: ${{ secrets.PUSHOVER_API_KEY }}
           ALLOWED_ORIGINS: ${{ vars.ALLOWED_ORIGINS }}
         run: |
           python - <<'PY'
           import os
           from huggingface_hub import HfApi, upload_folder, create_repo
 
-          space_id = os.environ.get("HF_SPACE_ID")  # format 'username/space-name'
+          space_id = os.environ.get("HF_SPACE_ID")  # 'username/space-name'
           hf_token = os.environ["HF_TOKEN"]
-          my_key = os.environ["PUSHOVER_API_KEY"]
+
+          frontend_key = os.environ.get("FRONTEND_APP_KEY")  # <-- added
+          pushover_key = os.environ.get("PUSHOVER_API_KEY")
           allowed_origins = os.environ.get("ALLOWED_ORIGINS", "")
 
           if not space_id:
@@ -47,11 +51,18 @@ jobs:
           except Exception:
               pass
 
-          # Upload backend folder contents (this repo's root assumed)
+          # Upload backend code
           upload_folder(repo_id=space_id, repo_type="space", folder_path=".", token=hf_token)
 
-          # Inject/update secrets and variables into the Space
-          api.add_space_secret(repo_id=space_id, key="PUSHOVER_API_KEY", value=my_key, token=hf_token)
+          # Set secrets/variables on the Space
+          if frontend_key:
+              api.add_space_secret(repo_id=space_id, key="FRONTEND_APP_KEY", value=frontend_key, token=hf_token)
+          else:
+              print("WARNING: FRONTEND_APP_KEY is empty; set repository secret FRONTEND_APP_KEY")
+
+          if pushover_key:
+              api.add_space_secret(repo_id=space_id, key="PUSHOVER_API_KEY", value=pushover_key, token=hf_token)
+
           if allowed_origins:
               api.add_space_variable(repo_id=space_id, key="ALLOWED_ORIGINS", value=allowed_origins, token=hf_token)
 
