@@ -1,34 +1,80 @@
-from fastapi import FastAPI
+# app.py
+import os
+from urllib.parse import urlparse
+
+from fastapi import FastAPI, Request, HTTPException, Depends
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-import os
 
 app = FastAPI()
 
-# CORS: allow your GitHub Pages origin (edit ORIGINS before deploying)
-ORIGINS = os.getenv("ALLOWED_ORIGINS", "").split(",") if os.getenv("ALLOWED_ORIGINS") else [
-    "https://<your-github-username>.github.io"
-]
+# --- Config ---
+ORIGINS_RAW = os.getenv("ALLOWED_ORIGINS", "")
+ALLOWED_ORIGINS = [o.strip().rstrip("/") for o in ORIGINS_RAW.split(",") if o.strip()]
+ALLOWED_HOSTS = {urlparse(o).netloc for o in ALLOWED_ORIGINS}
 
+FRONTEND_APP_KEY = os.getenv("FRONTEND_APP_KEY", "")  # set as HF Space Secret
+# Optional: other secrets you already use
+BACKEND_INTERNAL_SECRET = os.getenv("PUSHOVER_API_KEY", "")
+
+# --- CORS (browser preflight only) ---
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ORIGINS,
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=False,
-    allow_methods=["GET"],
+    allow_methods=["GET", "POST", "OPTIONS"],   # later: ["POST","OPTIONS"]
     allow_headers=["*"],
 )
 
-# Secret injected via HF Space Secrets (set by GitHub Actions)
-MY_API_KEY = os.getenv("PUSHOVER_API_KEY")
+async def require_frontend(request: Request):
+    """
+    Enforce:
+      - X-App-Key header matches FRONTEND_APP_KEY
+      - Origin/Referer host is in allowlist (blocks address-bar & hotlinking)
+      - No Origin/Referer => reject
+    """
+    if not FRONTEND_APP_KEY:
+        raise HTTPException(status_code=500, detail="Server missing FRONTEND_APP_KEY")
+
+    app_key = request.headers.get("x-app-key")
+    if app_key != FRONTEND_APP_KEY:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    origin = request.headers.get("origin")
+    referer = request.headers.get("referer")
+
+    host_ok = False
+    if origin:
+        host_ok = urlparse(origin).netloc in ALLOWED_HOSTS
+    elif referer:
+        host_ok = urlparse(referer).netloc in ALLOWED_HOSTS
+
+    if not host_ok:
+        raise HTTPException(status_code=403, detail="Origin not allowed")
+
+    return True
 
 @app.get("/")
 def root():
-    # Optional: serve this if you open the Space directly
-    return FileResponse("index.html") if os.path.exists("index.html") else JSONResponse({"ok": True, "service": "hf-backend"})
+    if os.path.exists("index.html"):
+        return FileResponse("index.html")
+    return JSONResponse({"ok": True, "service": "hf-backend"})
 
-@app.get("/hello")
-def hello(name: str = "World"):
-    if not MY_API_KEY:
-        return JSONResponse({"error": "API key not set in Space Secrets"}, status_code=500)
-    # Don't expose the key—only prove the server has it.
-    return {"message": f"Hello {name}! ✅ Backend has a secret securely.", "service": "hf-backend"}
+@app.get("/hello", dependencies=[Depends(require_frontend)])
+def hello_get(name: str = "World"):
+    if not BACKEND_INTERNAL_SECRET:
+        return JSONResponse({"error": "Internal secret not configured"}, status_code=500)
+    return {"message": f"Hello {name}! Backend is configured.", "service": "hf-backend"}
+
+@app.post("/hello", dependencies=[Depends(require_frontend)])
+async def hello_post(request: Request):
+    try:
+        data = await request.json()
+    except Exception:
+        data = {}
+    name = (data.get("name") if isinstance(data, dict) else None) or "World"
+    return {"message": f"Hello {name}! (POST)", "service": "hf-backend"}
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
