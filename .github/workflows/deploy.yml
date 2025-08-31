@@ -1,0 +1,59 @@
+name: Deploy HF Backend (FastAPI) & Inject Secrets
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install huggingface_hub
+        run: pip install -U huggingface_hub
+
+      - name: Upload to Hugging Face & set secrets
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          MY_API_KEY: ${{ secrets.MY_API_KEY }}
+          SPACE_ID: ${{ vars.SPACE_ID }}
+          ALLOWED_ORIGINS: ${{ vars.ALLOWED_ORIGINS }}
+        run: |
+          python - <<'PY'
+          import os
+          from huggingface_hub import HfApi, upload_folder, create_repo
+
+          space_id = os.environ.get("SPACE_ID")  # format 'username/space-name'
+          hf_token = os.environ["HF_TOKEN"]
+          my_key = os.environ["MY_API_KEY"]
+          allowed_origins = os.environ.get("ALLOWED_ORIGINS", "")
+
+          if not space_id:
+            raise SystemExit("Missing repository variable SPACE_ID (format: username/space-name)")
+
+          api = HfApi()
+          # Create FastAPI Space if missing
+          try:
+              create_repo(space_id, repo_type="space", space_sdk="fastapi", token=hf_token)
+          except Exception:
+              pass
+
+          # Upload backend folder contents (this repo's root assumed)
+          upload_folder(repo_id=space_id, repo_type="space", folder_path=".", token=hf_token)
+
+          # Inject/update secrets and variables into the Space
+          api.add_space_secret(repo_id=space_id, key="MY_API_KEY", value=my_key, token=hf_token)
+          if allowed_origins:
+              api.add_space_variable(repo_id=space_id, key="ALLOWED_ORIGINS", value=allowed_origins, token=hf_token)
+
+          print(f"Deployed to https://huggingface.co/spaces/{space_id}")
+          PY
