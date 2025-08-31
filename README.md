@@ -1,10 +1,13 @@
-title: My Hello API
-emoji: 🚀
-colorFrom: blue
-colorTo: green
-sdk: docker
-app_file: Dockerfile
+---
+title: {{title}}
+emoji: {{emoji}}
+colorFrom: {{colorFrom}}
+colorTo: {{colorTo}}
+sdk: {{sdk}}
+sdk_version: "{{sdkVersion}}"
+app_file: app.py
 pinned: false
+---
 
 # HF Backend (FastAPI) via GitHub Actions
 
