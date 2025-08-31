@@ -1,6 +1,11 @@
+
+import logging
+logger = logging.getLogger("uvicorn.error")
+
 # app.py
 import os
 from urllib.parse import urlparse
+
 
 from fastapi import FastAPI, Request, HTTPException, Depends
 from fastapi.responses import FileResponse, JSONResponse
@@ -78,3 +83,17 @@ async def hello_post(request: Request):
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+@app.get("/_diag")
+def diag():
+    return {
+        "has_FRONTEND_APP_KEY": bool(os.getenv("FRONTEND_APP_KEY")),
+        "allowed_origins": os.getenv("ALLOWED_ORIGINS", ""),
+    }
+
+@app.on_event("startup")
+def _startup():
+    has_key = bool(os.getenv("FRONTEND_APP_KEY"))
+    logger.info("Startup: FRONTEND_APP_KEY=%s", "present" if has_key else "MISSING")
+    logger.info("Startup: ALLOWED_ORIGINS=%s", os.getenv("ALLOWED_ORIGINS", "(none)"))
