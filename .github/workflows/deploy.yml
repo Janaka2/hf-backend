@@ -24,21 +24,21 @@ jobs:
       - name: Upload to Hugging Face & set secrets
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-          MY_API_KEY: ${{ secrets.MY_API_KEY }}
-          SPACE_ID: ${{ vars.SPACE_ID }}
+          PUSHOVER_API_KEY: ${{ secrets.PUSHOVER_API_KEY }}
+          HF_SPACE_ID: ${{ vars.HF_SPACE_ID }}
           ALLOWED_ORIGINS: ${{ vars.ALLOWED_ORIGINS }}
         run: |
           python - <<'PY'
           import os
           from huggingface_hub import HfApi, upload_folder, create_repo
 
-          space_id = os.environ.get("SPACE_ID")  # format 'username/space-name'
+          space_id = os.environ.get("HF_SPACE_ID")  # format 'username/space-name'
           hf_token = os.environ["HF_TOKEN"]
-          my_key = os.environ["MY_API_KEY"]
+          my_key = os.environ["PUSHOVER_API_KEY"]
           allowed_origins = os.environ.get("ALLOWED_ORIGINS", "")
 
           if not space_id:
-            raise SystemExit("Missing repository variable SPACE_ID (format: username/space-name)")
+            raise SystemExit("Missing repository variable HF_SPACE_ID (format: username/space-name)")
 
           api = HfApi()
           # Create FastAPI Space if missing
@@ -51,7 +51,7 @@ jobs:
           upload_folder(repo_id=space_id, repo_type="space", folder_path=".", token=hf_token)
 
           # Inject/update secrets and variables into the Space
-          api.add_space_secret(repo_id=space_id, key="MY_API_KEY", value=my_key, token=hf_token)
+          api.add_space_secret(repo_id=space_id, key="PUSHOVER_API_KEY", value=my_key, token=hf_token)
           if allowed_origins:
               api.add_space_variable(repo_id=space_id, key="ALLOWED_ORIGINS", value=allowed_origins, token=hf_token)
 
