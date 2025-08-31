@@ -1,6 +1,16 @@
+---
+title: My Hello API
+emoji: 🚀
+colorFrom: blue
+colorTo: green
+sdk: docker
+app_file: Dockerfile
+pinned: false
+---
 # HF Backend (FastAPI) via GitHub Actions
 
 This backend is deployed to a Hugging Face Space and reads secrets from **Space Secrets** injected by **GitHub Actions**.
+
 
 ## Required GitHub settings (in the *backend* repo)
 
