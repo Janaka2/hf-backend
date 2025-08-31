@@ -1,11 +1,10 @@
 ---
-title: {{title}}
-emoji: {{emoji}}
-colorFrom: {{colorFrom}}
-colorTo: {{colorTo}}
-sdk: {{sdk}}
-sdk_version: "{{sdkVersion}}"
-app_file: app.py
+title: My Hello API
+emoji: 🚀
+colorFrom: blue
+colorTo: green
+sdk: docker
+app_file: Dockerfile
 pinned: false
 ---
 
