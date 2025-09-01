@@ -28,3 +28,5 @@ After pushing to `main`, the Action:
 - Uploads this repo
 - Configures Space Secret `MY_API_KEY`
 - Sets Space Variable `ALLOWED_ORIGINS` if provided
+
+- Test
